@@ -9,7 +9,7 @@ rm(list=ls())
 
 ### install if necessary and then load the libraries you need
 
-j <- c("rstudioapi","plyr","dplyr","multcomp","reshape2","vegan","lme4","MASS","effects","ggplot2","ggstance","scales","gridExtra","ggpubr","ggsignif","corrplot","stringr","glmmTMB")
+j <- c("rstudioapi","plyr","dplyr","multcomp","reshape2","vegan","lme4","MASS","effects","ggplot2","ggstance","scales","gridExtra","ggpubr","ggsignif","corrplot","stringr","glmmTMB","RVAideMemoire","arm","cowplot")
 
 new.packages <- j[!(j %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
@@ -586,7 +586,7 @@ plot_q5 <- ggplot(data_q5_long,
   geom_bar(stat = "count", colour = "black", position = "dodge")+
   theme_classic()+
   scale_fill_manual(values = c("royalblue","skyblue3","paleturquoise","gold","goldenrod","grey70"))+
-  labs(x = "Site", y = "Number of respondents", fill = "Opinion")+
+  labs(x = "Site", y = "Number of respondents", fill = "Opinion", tag = "b")+
   theme(text = element_text(size = 15),
         panel.grid.major.y = element_line(colour = "grey90", size = 0.5))
 
@@ -604,7 +604,7 @@ plot_q5a <- ggplot(data_q5_long,
   geom_bar(stat = "count", colour = "black", position = "dodge")+
   theme_classic()+
   scale_fill_manual(values = c("royalblue","skyblue3","paleturquoise","gold","goldenrod","grey70"))+
-  labs(x = "Site type", y = "Number of respondents", fill = "Opinion")+
+  labs(x = "Site type", y = "Number of respondents", fill = "Opinion", tag = "a")+
   theme(text = element_text(size = 15),
         panel.grid.major.y = element_line(colour = "grey90", size = 0.5))
 
@@ -652,11 +652,35 @@ corrplot(test_q5$residuals, is.cor = FALSE,
 dev.off()
 
 
+## make and export the multiplots
+
+m5 <- grid.arrange(plot_q5a, plot_q5)
+
+#extract legend
+g_legend<-function(a.gplot){
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)}
+
+legm5 <-g_legend(plot_q5a)
+
+m5 <- grid.arrange(arrangeGrob(plot_q5a + theme(legend.position="none"),
+                               plot_q5 + theme(legend.position="none"),
+                               ncol=1),
+                   legm5, ncol=2,widths=c(8, 2))
+
+ggsave("Plots/Q5comb.svg", plot = m5, device = svg, width = 200, height = 160, units = "mm", limitsize = F)
+
+
 
 ### Q6 - Does people's assessment (correct or incorrect) of brownfield vs undeveloped status affect their opinion of the site?
 
 
 data_q6 <- merge(data_q4_long,data_q5_long)
+
+data_q6$Count <- 1
+
 
 # make a bar chart
 
@@ -707,7 +731,6 @@ ggsave("Plots/Q6b.svg", plot = plot_q6b, device = svg, width = 250, height = 100
 ## do a chi-squared test of this
 
 # summarise the data we need, make it wide-form, and place labels into rownames
-
 
 summary_q6b <- ddply(data_q6b, .(Opinion,Answer), summarise,
                     Frequency = sum(Count))
@@ -1942,6 +1965,16 @@ plot_q8c
 ggsave("Plots/Q8c.svg", plot = plot_q8c, device = svg, width = 250, height = 300, units = "mm", limitsize = F)
 
 
+# and one last time, to now incorporate the original overarching preferences
+# (switching to cowplot so I can put a single label on a preexisting arrangeGrob object)
+
+plot_q8comb <- plot_grid(plot_q8a, plot_q8c,
+                         ncol = 1, rel_heights = c(3,8),
+                         labels = c("a","b"))
+
+plot_q8comb
+
+ggsave("Plots/Q8comb.svg", plot = plot_q8comb, device = svg, width = 375, height = 500, units = "mm", limitsize = F)
 
 
 
@@ -2419,6 +2452,7 @@ p9i
 ## settlement tenure
 
 summary(data_dem$HBUDEMOG_Q18b)
+summary(as.factor(data_dem$HBUDEMOG_Q18b))
 
 q9jmatch <- data.frame(
   HBUDEMOG_Q18b = c(1:5,99),
